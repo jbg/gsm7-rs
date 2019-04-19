@@ -1,0 +1,9 @@
+[package]
+name = "gsm7"
+version = "0.1.0"
+authors = ["Jasper <jbg@rf.net.nz>"]
+edition = "2018"
+
+[dependencies]
+bitstream-io = "0.8.2"
+phf = { version = "0.7.24", features = ["macros"] }
