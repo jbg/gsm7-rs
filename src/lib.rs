@@ -2,9 +2,11 @@
 
 use std::io;
 
-use bitstream_io::{BigEndian, BitReader, BitWriter};
+use bitstream_io::{BitReader, BitWriter, LittleEndian};
 use phf::phf_ordered_set;
 
+
+type Endianness = LittleEndian;
 
 const ESC: u8 = 0x1B;
 
@@ -19,8 +21,24 @@ static GSM7_CHARSET: phf::OrderedSet<char> = phf_ordered_set! {
     'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',  'y', 'z',  'ä',    'ö', 'ñ',  'ü', 'à',
 };
 
+// Example
+// String: Tttt
+//
+// GSM-7 encoding:
+// 0x54 0x74 0x74 0x74
+// 0010101 0010111 0010111 0010111
+// 00101010 01011100 10111001 01110000
+// 0x2a 0x5c 0xb9 0x70
+//
+//
+// 1010100 1110100 1110100 1110100
+// 10101001 11010011 10100111 0100xxxx
+// 0xa9 0xd3 0xa7 0x40
+//
+// In GSM modem PDU format: 543A9D0E
+
 pub struct Gsm7Reader<R: io::Read> {
-    reader: BitReader<R, BigEndian>
+    reader: BitReader<R, Endianness>,
 }
 
 impl<R: io::Read> Gsm7Reader<R> {
@@ -71,7 +89,7 @@ impl<R: io::Read> Iterator for Gsm7Reader<R> {
 }
 
 pub struct Gsm7Writer<W: io::Write> {
-    writer: BitWriter<W, BigEndian>,
+    writer: BitWriter<W, Endianness>,
     counter: usize,
 }
 
@@ -149,6 +167,14 @@ mod tests {
         assert_eq!(reader.read_char().unwrap(), Some('l'));
         assert_eq!(reader.read_char().unwrap(), Some('l'));
         assert_eq!(reader.read_char().unwrap(), Some('o'));
+    }
+
+    #[test]
+    fn it_works_correctly() {
+        let v: Vec<_> = vec![0x45, 0xA3, 0xD9, 0xE0].into_iter().collect();
+        let reader = Gsm7Reader::new(io::Cursor::new(&v));
+        let s: String = reader.collect::<io::Result<_>>().unwrap();
+        assert_eq!(&s, "Tttt");
     }
 
     #[test]
