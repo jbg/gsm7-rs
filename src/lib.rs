@@ -21,22 +21,6 @@ static GSM7_CHARSET: phf::OrderedSet<char> = phf_ordered_set! {
     'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',  'y', 'z',  'ä',    'ö', 'ñ',  'ü', 'à',
 };
 
-// Example
-// String: Tttt
-//
-// GSM-7 encoding:
-// 0x54 0x74 0x74 0x74
-// 0010101 0010111 0010111 0010111
-// 00101010 01011100 10111001 01110000
-// 0x2a 0x5c 0xb9 0x70
-//
-//
-// 1010100 1110100 1110100 1110100
-// 10101001 11010011 10100111 0100xxxx
-// 0xa9 0xd3 0xa7 0x40
-//
-// In GSM modem PDU format: 543A9D0E
-
 pub struct Gsm7Reader<R: io::Read> {
     reader: BitReader<R, Endianness>,
 }
@@ -96,6 +80,13 @@ pub struct Gsm7Writer<W: io::Write> {
 impl<W: io::Write> Gsm7Writer<W> {
     pub fn new(writer: W) -> Self {
         Self { writer: BitWriter::new(writer), counter: 0 }
+    }
+
+    pub fn write_str(&mut self, s: &str) -> io::Result<()> {
+        for c in s.chars() {
+            self.write_char(c)?;
+        }
+        Ok(())
     }
 
     pub fn write_char(&mut self, c: char) -> io::Result<()> {
