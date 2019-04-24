@@ -30,6 +30,10 @@ impl<R: io::Read> Gsm7Reader<R> {
         Self { reader: BitReader::new(reader) }
     }
 
+    pub fn with_bit_reader(reader: BitReader<R, Endianness>) -> Self {
+        Self { reader }
+    }
+
     pub fn read_char(&mut self) -> io::Result<Option<char>> {
         let septet: u8 = match self.reader.read(7) {
             Ok(s) => s,
@@ -182,7 +186,7 @@ mod tests {
 
     #[test]
     fn it_works_correctly() {
-        let v: Vec<_> = vec![0x45, 0xA3, 0xD9, 0xE0].into_iter().collect();
+        let v: Vec<_> = vec![84, 58, 157, 14].into_iter().collect();
         let reader = Gsm7Reader::new(io::Cursor::new(&v));
         let s: String = reader.collect::<io::Result<_>>().unwrap();
         assert_eq!(&s, "Tttt");
