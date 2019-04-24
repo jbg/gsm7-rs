@@ -82,6 +82,10 @@ impl<W: io::Write> Gsm7Writer<W> {
         Self { writer: BitWriter::new(writer), counter: 0 }
     }
 
+    pub fn write_bit(&mut self, bit: bool) -> io::Result<()> {
+        self.writer.write_bit(bit)
+    }
+
     pub fn write_str(&mut self, s: &str) -> io::Result<()> {
         for c in s.chars() {
             self.write_char(c)?;
