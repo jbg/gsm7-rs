@@ -83,14 +83,18 @@ impl<W: io::Write> Gsm7Writer<W> {
     }
 
     pub fn write_bit(&mut self, bit: bool) -> io::Result<()> {
-        self.writer.write_bit(bit)
+        self.writer.write_bit(bit)?;
+        ++self.counter;
+        Ok(())
     }
 
     pub fn write<U>(&mut self, bits: u32, value: U) -> io::Result<()>
     where
         U: Numeric
     {
-        self.writer.write(bits, value)
+        self.writer.write(bits, value)?;
+        self.counter += bits;
+        Ok(())
     }
 
     pub fn write_bytes(&mut self, buf: &[u8]) -> io::Result<()> {
@@ -118,12 +122,12 @@ impl<W: io::Write> Gsm7Writer<W> {
             '€' => self.write_ext(0x65)?,
             _ => if let Some(b) = GSM7_CHARSET.get_index(&c) {
                 self.writer.write(7, b as u8)?;
+                self.counter += 7;
             }
             else {
                 return Err(io::ErrorKind::InvalidData.into());
             }
         }
-        self.counter += 7;
         Ok(())
     }
 
@@ -141,6 +145,7 @@ impl<W: io::Write> Gsm7Writer<W> {
     fn write_ext(&mut self, b: u8) -> io::Result<()> {
         self.writer.write(7, 0x1B)?;
         self.writer.write(7, b)?;
+        self.counter += 14;
         Ok(())
     }
 }
