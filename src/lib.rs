@@ -84,7 +84,7 @@ impl<W: io::Write> Gsm7Writer<W> {
 
     pub fn write_bit(&mut self, bit: bool) -> io::Result<()> {
         self.writer.write_bit(bit)?;
-        ++self.counter;
+        self.counter += 1;
         Ok(())
     }
 
@@ -93,7 +93,7 @@ impl<W: io::Write> Gsm7Writer<W> {
         U: Numeric
     {
         self.writer.write(bits, value)?;
-        self.counter += bits;
+        self.counter += bits as usize;
         Ok(())
     }
 
