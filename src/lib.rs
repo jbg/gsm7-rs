@@ -2,7 +2,7 @@
 
 use std::io;
 
-use bitstream_io::{BitReader, BitWriter, LittleEndian};
+use bitstream_io::{BitReader, BitWriter, LittleEndian, Numeric};
 use phf::phf_ordered_set;
 
 
@@ -84,6 +84,17 @@ impl<W: io::Write> Gsm7Writer<W> {
 
     pub fn write_bit(&mut self, bit: bool) -> io::Result<()> {
         self.writer.write_bit(bit)
+    }
+
+    pub fn write<U>(&mut self, bits: u32, value: U) -> io::Result<()>
+    where
+        U: Numeric
+    {
+        self.writer.write(bits, value)
+    }
+
+    pub fn write_bytes(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.writer.write_bytes(buf)
     }
 
     pub fn write_str(&mut self, s: &str) -> io::Result<()> {
