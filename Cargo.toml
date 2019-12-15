@@ -9,4 +9,3 @@ readme = "README.md"
 
 [dependencies]
 bitstream-io = "0.8.2"
-phf = { version = "0.7.24", features = ["macros"] }

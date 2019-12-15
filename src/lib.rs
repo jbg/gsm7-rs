@@ -1,16 +1,13 @@
-#![feature(proc_macro_hygiene)]
-
 use std::io;
 
 use bitstream_io::{BitReader, BitWriter, LittleEndian, Numeric};
-use phf::phf_ordered_set;
 
 
 type Endianness = LittleEndian;
 
 const ESC: u8 = 0x1B;
 
-static GSM7_CHARSET: phf::OrderedSet<char> = phf_ordered_set! {
+static GSM7_CHARSET: [char; 128] = [
     '@', '£', '$', '¥', 'è', 'é', 'ù', 'ì',  'ò', 'Ç', '\n', 'Ø',    'ø', '\r', 'Å', 'å',
     'Δ', '_', 'Φ', 'Γ', 'Λ', 'Ω', 'Π', 'Ψ',  'Σ', 'Θ', 'Ξ',  '\x1B', 'Æ', 'æ',  'ß', 'É',
     ' ', '!', '"', '#', '¤', '%', '&', '\'', '(', ')', '*',  '+',    ',', '-',  '.', '/',
@@ -19,7 +16,7 @@ static GSM7_CHARSET: phf::OrderedSet<char> = phf_ordered_set! {
     'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',  'Y', 'Z',  'Ä',    'Ö', 'Ñ',  'Ü', '§',
     '¿', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',  'i', 'j',  'k',    'l', 'm',  'n', 'o',
     'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',  'y', 'z',  'ä',    'ö', 'ñ',  'ü', 'à',
-};
+];
 
 pub struct Gsm7Reader<R: io::Read> {
     reader: BitReader<R, Endianness>,
@@ -58,7 +55,7 @@ impl<R: io::Read> Gsm7Reader<R> {
             }))
         }
         else {
-            if let Some(c) = GSM7_CHARSET.index(septet as usize) {
+            if let Some(c) = GSM7_CHARSET.get(septet as usize) {
                 Ok(Some(*c))
             }
             else {
@@ -124,7 +121,7 @@ impl<W: io::Write> Gsm7Writer<W> {
             ']' => self.write_ext(0x3E)?,
             '|' => self.write_ext(0x40)?,
             '€' => self.write_ext(0x65)?,
-            _ => if let Some(b) = GSM7_CHARSET.get_index(&c) {
+            _ => if let Ok(b) = GSM7_CHARSET.binary_search(&c) {
                 self.writer.write(7, b as u8)?;
                 self.counter += 7;
             }
@@ -190,6 +187,11 @@ mod tests {
         let reader = Gsm7Reader::new(io::Cursor::new(&v));
         let s: String = reader.collect::<io::Result<_>>().unwrap();
         assert_eq!(&s, "Tttt");
+
+        let v = vec![0xD4, 0xF2, 0x9C, 0x0E];
+        let reader = Gsm7Reader::new(io::Cursor::new(&v));
+        let s: String = reader.collect::<io::Result<_>>().unwrap();
+        assert_eq!(&s, "Test");
     }
 
     #[test]
