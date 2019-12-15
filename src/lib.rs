@@ -121,7 +121,7 @@ impl<W: io::Write> Gsm7Writer<W> {
             ']' => self.write_ext(0x3E)?,
             '|' => self.write_ext(0x40)?,
             '€' => self.write_ext(0x65)?,
-            _ => if let Ok(b) = GSM7_CHARSET.binary_search(&c) {
+            _ => if let Some(b) = GSM7_CHARSET.iter().position(|&v| v == c) {
                 self.writer.write(7, b as u8)?;
                 self.counter += 7;
             }
