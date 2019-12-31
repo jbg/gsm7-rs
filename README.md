@@ -7,9 +7,9 @@
 ## Decoding
 
 ```rust
-let v: Vec<_> = vec![84, 58, 157, 14].into_iter().collect();
+let v = vec![84, 58, 157, 14];
 let reader = Gsm7Reader::new(io::Cursor::new(&v));
-let s: String = reader.collect::<io::Result<_>>().unwrap();
+let s = reader.collect::<io::Result<String>>()?;
 assert_eq!(&s, "Tttt");
 ```
 
@@ -17,13 +17,9 @@ assert_eq!(&s, "Tttt");
 
 ```rust
 let mut writer = Gsm7Writer::new(Vec::new());
-writer.write_char('H').unwrap();
-writer.write_char('e').unwrap();
-writer.write_char('l').unwrap();
-writer.write_char('l').unwrap();
-writer.write_char('o').unwrap();
+writer.write_str("Hello")?;
 
-let v = writer.into_writer().unwrap();
+let v = writer.into_writer()?;
 println!("v: {:?}", v);
 ```
 
