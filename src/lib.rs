@@ -1,20 +1,19 @@
 use std::io;
 
-use bitstream_io::{BitReader, BitWriter, LittleEndian, Numeric};
+use bitstream_io::{BitRead, BitReader, BitWrite, BitWriter, Integer, LittleEndian};
 
 type Endianness = LittleEndian;
 
 const ESC: u8 = 0x1B;
 
 static GSM7_CHARSET: [char; 128] = [
-    '@', '£', '$', '¥', 'è', 'é', 'ù', 'ì',  'ò', 'Ç', '\n', 'Ø',    'ø', '\r', 'Å', 'å',
-    'Δ', '_', 'Φ', 'Γ', 'Λ', 'Ω', 'Π', 'Ψ',  'Σ', 'Θ', 'Ξ',  '\x1B', 'Æ', 'æ',  'ß', 'É',
-    ' ', '!', '"', '#', '¤', '%', '&', '\'', '(', ')', '*',  '+',    ',', '-',  '.', '/',
-    '0', '1', '2', '3', '4', '5', '6', '7', '8',  '9', ':',  ';',    '<', '=',  '>', '?',
-    '¡', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',  'I', 'J',  'K',    'L', 'M',  'N', 'O',
-    'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',  'Y', 'Z',  'Ä',    'Ö', 'Ñ',  'Ü', '§',
-    '¿', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',  'i', 'j',  'k',    'l', 'm',  'n', 'o',
-    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',  'y', 'z',  'ä',    'ö', 'ñ',  'ü', 'à',
+    '@', '£', '$', '¥', 'è', 'é', 'ù', 'ì', 'ò', 'Ç', '\n', 'Ø', 'ø', '\r', 'Å', 'å', 'Δ', '_',
+    'Φ', 'Γ', 'Λ', 'Ω', 'Π', 'Ψ', 'Σ', 'Θ', 'Ξ', '\x1B', 'Æ', 'æ', 'ß', 'É', ' ', '!', '"', '#',
+    '¤', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6',
+    '7', '8', '9', ':', ';', '<', '=', '>', '?', '¡', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I',
+    'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'Ä', 'Ö',
+    'Ñ', 'Ü', '§', '¿', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'ä', 'ö', 'ñ', 'ü', 'à',
 ];
 
 pub struct Gsm7Reader<R: io::Read> {
@@ -23,7 +22,9 @@ pub struct Gsm7Reader<R: io::Read> {
 
 impl<R: io::Read> Gsm7Reader<R> {
     pub fn new(reader: R) -> Self {
-        Self { reader: BitReader::new(reader) }
+        Self {
+            reader: BitReader::new(reader),
+        }
     }
 }
 
@@ -37,14 +38,14 @@ impl<R: io::Read> Iterator for Gsm7Reader<R> {
     type Item = io::Result<char>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let septet: u8 = match self.reader.read(7) {
+        let septet = match self.reader.read::<7, u8>() {
             Ok(s) => s,
             Err(ref e) if e.kind() == io::ErrorKind::UnexpectedEof => return None,
             Err(e) => return Some(Err(e)),
         };
 
         if septet == ESC {
-            let septet: u8 = match self.reader.read(7) {
+            let septet = match self.reader.read::<7, u8>() {
                 Ok(s) => s,
                 Err(e) => return Some(Err(e)),
             };
@@ -61,12 +62,10 @@ impl<R: io::Read> Iterator for Gsm7Reader<R> {
                 0x65 => '€',
                 _ => return Some(Err(io::ErrorKind::InvalidData.into())),
             }))
-        }
-        else {
+        } else {
             if let Some(c) = GSM7_CHARSET.get(septet as usize) {
                 Some(Ok(*c))
-            }
-            else {
+            } else {
                 Some(Err(io::ErrorKind::InvalidData.into()))
             }
         }
@@ -80,7 +79,10 @@ pub struct Gsm7Writer<W: io::Write> {
 
 impl<W: io::Write> Gsm7Writer<W> {
     pub fn new(writer: W) -> Self {
-        Self { writer: BitWriter::new(writer), counter: 0 }
+        Self {
+            writer: BitWriter::new(writer),
+            counter: 0,
+        }
     }
 
     pub fn write_bit(&mut self, bit: bool) -> io::Result<()> {
@@ -89,11 +91,20 @@ impl<W: io::Write> Gsm7Writer<W> {
         Ok(())
     }
 
-    pub fn write<U>(&mut self, bits: u32, value: U) -> io::Result<()>
+    pub fn write<const BITS: u32, I>(&mut self, value: I) -> io::Result<()>
     where
-        U: Numeric
+        I: Integer,
     {
-        self.writer.write(bits, value)?;
+        self.writer.write::<BITS, I>(value)?;
+        self.counter += BITS as usize;
+        Ok(())
+    }
+
+    pub fn write_var<I>(&mut self, bits: u32, value: I) -> io::Result<()>
+    where
+        I: Integer,
+    {
+        self.writer.write_var(bits, value)?;
         self.counter += bits as usize;
         Ok(())
     }
@@ -121,12 +132,13 @@ impl<W: io::Write> Gsm7Writer<W> {
             ']' => self.write_ext(0x3E)?,
             '|' => self.write_ext(0x40)?,
             '€' => self.write_ext(0x65)?,
-            _ => if let Some(b) = GSM7_CHARSET.iter().position(|&v| v == c) {
-                self.writer.write(7, b as u8)?;
-                self.counter += 7;
-            }
-            else {
-                return Err(io::ErrorKind::InvalidData.into());
+            _ => {
+                if let Some(b) = GSM7_CHARSET.iter().position(|&v| v == c) {
+                    self.writer.write::<7, u8>(b as _)?;
+                    self.counter += 7;
+                } else {
+                    return Err(io::ErrorKind::InvalidData.into());
+                }
             }
         }
         Ok(())
@@ -135,17 +147,16 @@ impl<W: io::Write> Gsm7Writer<W> {
     pub fn into_writer(mut self) -> io::Result<W> {
         let remainder = self.counter % 8;
         if remainder == 7 {
-            self.writer.write(7, 0x0D)?;
-        }
-        else if remainder != 0 {
+            self.writer.write::<7, u8>(0x0D)?;
+        } else if remainder != 0 {
             self.writer.byte_align()?;
         }
         Ok(self.writer.into_writer())
     }
 
     fn write_ext(&mut self, b: u8) -> io::Result<()> {
-        self.writer.write(7, 0x1B)?;
-        self.writer.write(7, b)?;
+        self.writer.write::<7, u8>(0x1B)?;
+        self.writer.write::<7, _>(b)?;
         self.counter += 14;
         Ok(())
     }
