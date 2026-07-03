@@ -26,6 +26,11 @@ impl<R: io::Read> Gsm7Reader<R> {
             reader: BitReader::new(reader),
         }
     }
+    pub fn new_with_bit_offset(reader: R, offset: u32) -> io::Result<Self> {
+        let mut reader = BitReader::new(reader);
+        reader.skip(offset)?;
+        Ok(Self { reader })
+    }
 }
 
 impl<R: io::Read> From<BitReader<R, Endianness>> for Gsm7Reader<R> {
