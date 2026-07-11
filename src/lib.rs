@@ -83,6 +83,12 @@ pub struct Gsm7Writer<W: io::Write> {
 }
 
 impl<W: io::Write> Gsm7Writer<W> {
+    pub fn get_written_bit_count(&self) -> usize {
+        self.counter
+    }
+}
+
+impl<W: io::Write> Gsm7Writer<W> {
     pub fn new(writer: W) -> Self {
         Self {
             writer: BitWriter::new(writer),
