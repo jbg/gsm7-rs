@@ -104,6 +104,12 @@ impl<W: io::Write> Gsm7Writer<W> {
         }
     }
 
+    pub fn new_with_bit_offset(writer: W, offset: u32) -> io::Result<Self> {
+        let mut this = Self::new(writer);
+        this.writer.pad(offset)?;
+        Ok(this)
+    }
+
     pub fn write_bit(&mut self, bit: bool) -> io::Result<()> {
         self.writer.write_bit(bit)?;
         self.counter += 1;
