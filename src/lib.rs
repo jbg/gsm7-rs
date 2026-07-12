@@ -16,6 +16,14 @@ static GSM7_CHARSET: [char; 128] = [
     'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'ä', 'ö', 'ñ', 'ü', 'à',
 ];
 
+/// Check whether a character is encoded as a GSM 7-bit extended character.
+pub fn is_extended_character(c: char) -> bool {
+    match c {
+        '\x0C' | '^' | '{' | '}' | '\\' | '[' | '~' | ']' | '|' | '€' => true,
+        _ => false,
+    }
+}
+
 pub struct Gsm7Reader<R: io::Read> {
     reader: BitReader<R, Endianness>,
 }
